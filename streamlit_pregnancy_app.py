@@ -5,7 +5,9 @@ A7DO — Pregnancy & Fetal Development (Streamlit UI)
 from __future__ import annotations
 
 from dataclasses import dataclass
+import importlib.util
 import math
+from pathlib import Path
 import streamlit as st
 
 
@@ -31,6 +33,30 @@ def init_state() -> None:
         )
     if "pregnancy_running" not in st.session_state:
         st.session_state.pregnancy_running = False
+    if "life_loop" not in st.session_state:
+        st.session_state.life_loop = None
+    if "world_env" not in st.session_state:
+        st.session_state.world_env = None
+
+
+ROOT = Path(__file__).resolve().parent
+
+
+def load_module(name: str, relative_path: str):
+    path = ROOT / relative_path
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@st.cache_resource
+def get_physics_gate():
+    physics_mod = load_module(
+        "physics_gate",
+        "01_PHYSICS_SANITY_SANDYS_LAW/gating.py",
+    )
+    return physics_mod.PhysicsGate()
 
 
 def advance_day(days: int = 1) -> None:
@@ -115,6 +141,45 @@ def build_ecg_series(postnatal_days: int, points: int = 140) -> list[float]:
         heartbeat = base + drift + flutter
         series.append(max(85, min(160, heartbeat)))
     return series
+
+
+def logistic(x: float, mid: float, k: float) -> float:
+    return 1.0 / (1.0 + math.exp(-k * (x - mid)))
+
+
+def build_growth_metrics(gestational_weeks: float) -> dict[str, float | str]:
+    # Physics-gated growth using Sandy's Law (energy conservation).
+    physics = get_physics_gate()
+
+    # Simplified biological curves (logistic) for fetal growth.
+    weight_kg = 0.01 + 3.3 * logistic(gestational_weeks, mid=30, k=0.33)
+    length_cm = 3.0 + 47.0 * logistic(gestational_weeks, mid=28, k=0.28)
+    head_cm = 2.5 + 32.0 * logistic(gestational_weeks, mid=26, k=0.30)
+
+    # Energy model (unitless) from A7DO math: E(t+1) = E(t) - W - H + I
+    intake = 8.0 + gestational_weeks * 0.25
+    work = 1.8 + gestational_weeks * 0.08
+    heat = 1.2 + gestational_weeks * 0.05
+    energy_next = max(0.0, intake - work - heat)
+    growth_cost = 2.5 + gestational_weeks * 0.12
+
+    growth_allowed = True
+    try:
+        physics.allow(growth_cost, energy_next)
+    except Exception:
+        growth_allowed = False
+
+    return {
+        "weight_kg": round(weight_kg, 3),
+        "length_cm": round(length_cm, 1),
+        "head_circumference_cm": round(head_cm, 1),
+        "energy_intake": round(intake, 2),
+        "energy_work": round(work, 2),
+        "energy_heat": round(heat, 2),
+        "energy_available": round(energy_next, 2),
+        "growth_cost": round(growth_cost, 2),
+        "growth_allowed": "YES" if growth_allowed else "NO",
+    }
 
 
 def build_postnatal_growth(postnatal_days: int) -> dict[str, float | int]:
@@ -286,7 +351,32 @@ postnatal_days = max(0, snapshot.biological_days - (birth_weeks * 7))
 is_postnatal = snapshot.gestational_weeks >= birth_weeks
 auto_step_days = max(1, int(round(1 + (snapshot.gestational_weeks / birth_weeks) * 2)))
 
+if is_postnatal and st.session_state.life_loop is None:
+    world_time_mod = load_module("world_time", "09_WORLD_MODEL/time.py")
+    world_state_mod = load_module("world_state", "09_WORLD_MODEL/world_state.py")
+    world_env_mod = load_module("world_env", "09_WORLD_MODEL/environments/world.py")
+    life_loop_mod = load_module("life_loop", "00_CORE_EXISTENCE/bootstrap/life_loop.py")
+
+    WorldTime = world_time_mod.WorldTime
+    WorldState = world_state_mod.WorldState
+    World = world_env_mod.World
+    LifeLoop = life_loop_mod.LifeLoop
+
+    world_time = WorldTime()
+    world_state = WorldState(default_place="house")
+    st.session_state.world_env = World.create(world_state=world_state)
+    st.session_state.life_loop = LifeLoop(world_time, world_state)
+
 st.title("🧬 A7DO — Pregnancy & Fetal Development")
+
+stage_label = "Postnatal" if is_postnatal else f"Prenatal (T{snapshot.trimester})"
+st.markdown(
+    "<div class='section-card'>"
+    "<strong>Stage</strong><br>"
+    f"{stage_label} — Week {snapshot.gestational_weeks:.2f} / Day {snapshot.biological_days}"
+    "</div>",
+    unsafe_allow_html=True,
+)
 
 left, middle, right = st.columns([1.2, 2, 1.2])
 with left:
@@ -339,6 +429,9 @@ st.dataframe(
     build_prenatal_body_table(snapshot.trimester),
     width="stretch",
 )
+
+st.subheader("📏 Biology Growth (Physics-Gated)")
+st.json(build_growth_metrics(snapshot.gestational_weeks))
 
 st.subheader("🧠 Autonomic & Neural Status")
 st.dataframe(build_neural_table(snapshot.trimester), width="stretch")
@@ -396,11 +489,42 @@ if is_postnatal:
     with neonatal_right:
         st.subheader("🩺 Physiology")
         st.json(build_neonatal_physiology(postnatal_days))
+    st.divider()
+    st.header("LifeLoop (Active After Birth)")
+    life = st.session_state.life_loop
+    if life is not None:
+        control_left, control_right = st.columns([1, 2])
+        with control_left:
+            if st.button("Tick LifeLoop (1)", width="stretch"):
+                life.tick()
+            run_n = st.number_input(
+                "Run N LifeLoop ticks",
+                min_value=1,
+                max_value=100,
+                value=5,
+                step=1,
+            )
+            if st.button("Run LifeLoop N", width="stretch"):
+                for _ in range(int(run_n)):
+                    life.tick()
+        with control_right:
+            st.json({
+                "energy": life.energy.level(),
+                "strain": life.overload.strain,
+                "last_action": getattr(life.motor, "last_action", None),
+                "lifecycle_stage": str(life.lifecycle.stage),
+                "time_internal": life.internal_time,
+                "time_real": life.clock.now(),
+                "time_world": life.world_time.t,
+            })
+            st.subheader("Recent Memory")
+            st.json(life.memory.recent(5))
 else:
     st.info(
         "External world interfaces remain locked. "
         "ECG monitoring and neonatal regulation activate at birth."
     )
+    st.caption("LifeLoop locked until birth.")
 
 if is_postnatal:
     st.caption(
