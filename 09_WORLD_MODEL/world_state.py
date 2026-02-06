@@ -12,6 +12,8 @@ class WorldState:
             "last_action": None,
             "last_sensation": None,
             "time": None,
+            "current_place": None,
+            "known_places": [],
         }
 
     def update(self, **kwargs):
@@ -28,3 +30,11 @@ class WorldState:
         Return a read-only snapshot of the current world state.
         """
         return dict(self._state)
+
+    def update_location(self, place_id):
+        """
+        Update the current place and track known places.
+        """
+        self._state["current_place"] = place_id
+        if place_id not in self._state["known_places"]:
+            self._state["known_places"].append(place_id)
