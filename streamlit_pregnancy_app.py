@@ -49,6 +49,63 @@ def build_life_support_table() -> list[dict[str, str]]:
     ]
 
 
+def build_development_timeline(
+    gestational_weeks: float,
+    postnatal_days: int,
+    birth_weeks: int,
+) -> list[dict[str, str]]:
+    prenatal_events = [
+        (4, "Neural tube closes"),
+        (6, "Heart begins coordinated beating"),
+        (8, "Limb buds form"),
+        (12, "Reflexes appear"),
+        (16, "Movement becomes strong"),
+        (24, "Sensory pathways online"),
+        (28, "Sleep/wake cycles stabilize"),
+        (32, "Autonomic regulation matures"),
+        (36, "Systems prepare for birth"),
+        (birth_weeks, "Birth event"),
+    ]
+    postnatal_events = [
+        (0, "External world activation"),
+        (1, "Breathing + circulation adjust"),
+        (2, "ECG monitoring online"),
+        (7, "Feeding rhythm stabilizes"),
+        (14, "Thermal regulation steadies"),
+        (30, "Early motor control strengthens"),
+    ]
+    timeline: list[dict[str, str]] = []
+    for week, label in prenatal_events:
+        status = "UPCOMING"
+        if gestational_weeks >= week:
+            status = "ONLINE"
+        if week == birth_weeks and gestational_weeks >= birth_weeks:
+            status = "BIRTH_EVENT"
+        timeline.append(
+            {
+                "Phase": "Prenatal",
+                "Time": f"Week {week}",
+                "Event": label,
+                "Status": status,
+            }
+        )
+    for day, label in postnatal_events:
+        status = "LOCKED"
+        if gestational_weeks >= birth_weeks:
+            status = "UPCOMING"
+            if postnatal_days >= day:
+                status = "ONLINE"
+        timeline.append(
+            {
+                "Phase": "Postnatal",
+                "Time": f"Day {day}",
+                "Event": label,
+                "Status": status,
+            }
+        )
+    return timeline
+
+
 def build_ecg_series(postnatal_days: int, points: int = 140) -> list[float]:
     base = 110 + min(postnatal_days, 30) * 0.2
     series = []
@@ -226,6 +283,8 @@ init_state()
 snapshot = st.session_state.pregnancy
 birth_weeks = 40
 postnatal_days = max(0, snapshot.biological_days - (birth_weeks * 7))
+is_postnatal = snapshot.gestational_weeks >= birth_weeks
+auto_step_days = max(1, int(round(1 + (snapshot.gestational_weeks / birth_weeks) * 2)))
 
 st.title("🧬 A7DO — Pregnancy & Fetal Development")
 
@@ -246,18 +305,31 @@ with right:
     st.markdown(
         "<div class='section-card'>"
         "<strong>Notes</strong><br>"
-        "Manual progression keeps developmental boundaries authoritative."
+        f"Auto-step rate: {auto_step_days} day(s) per cycle."
         "</div>",
         unsafe_allow_html=True,
     )
 
 if st.session_state.pregnancy_running:
-    advance_day(1)
+    advance_day(auto_step_days)
 
 metrics = st.columns(3)
 metrics[0].metric("Gestational Weeks", f"{snapshot.gestational_weeks:.2f}")
 metrics[1].metric("Biological Days", f"{snapshot.biological_days}")
-metrics[2].metric("Trimester", f"{snapshot.trimester}")
+metrics[2].metric("Phase", "Postnatal" if is_postnatal else "Prenatal")
+
+st.subheader("ðŸ§­ Linear Development Timeline")
+st.dataframe(
+    build_development_timeline(
+        snapshot.gestational_weeks,
+        postnatal_days,
+        birth_weeks,
+    ),
+    width="stretch",
+)
+
+st.divider()
+st.header("Prenatal Phase")
 
 st.subheader("❤️ Life-Support Systems")
 st.dataframe(build_life_support_table(), width="stretch")
@@ -286,7 +358,7 @@ st.dataframe(
 )
 
 st.subheader("🎂 Birth Status")
-if snapshot.gestational_weeks >= birth_weeks:
+if is_postnatal:
     st.success("Birth threshold reached — LifeLoop may initialize.")
     st.markdown(
         "<div class='section-card'>"
@@ -302,8 +374,10 @@ else:
         f"Estimated weeks until birth: {remaining}"
     )
 
+st.divider()
+st.header("Postnatal Phase")
 st.subheader("🌍 External World Activation")
-if snapshot.gestational_weeks >= birth_weeks:
+if is_postnatal:
     st.markdown(
         "<div class='section-card'>"
         "<strong>Neonatal Life Online</strong><br>"
@@ -328,7 +402,13 @@ else:
         "ECG monitoring and neonatal regulation activate at birth."
     )
 
-st.caption(
-    "Prenatal phase structure and autonomic systems only. "
-    "No cognition, learning, selfness, attention, or memory is active."
-)
+if is_postnatal:
+    st.caption(
+        "Postnatal phase active. External regulation and neonatal systems "
+        "are now online."
+    )
+else:
+    st.caption(
+        "Prenatal phase structure and autonomic systems only. "
+        "No cognition, learning, selfness, attention, or memory is active."
+    )
