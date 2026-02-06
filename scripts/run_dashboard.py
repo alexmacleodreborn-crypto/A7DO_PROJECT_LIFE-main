@@ -64,7 +64,7 @@ Council = council_mod.Council
 
 
 def build_system():
-    world = WorldState(default_place="house_01")
+    world = WorldState(default_place="house")
     World.create(world_state=world)
     memory = EpisodicMemory(capacity=20)
     attention = AttentionSystem(memory, focus_size=5)
