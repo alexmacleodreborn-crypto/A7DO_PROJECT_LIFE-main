@@ -25,9 +25,11 @@ def load_module(name: str, relative_path: str):
 # --------------------------------------------------
 world_time_mod = load_module("world_time", "09_WORLD_MODEL/time.py")
 world_state_mod = load_module("world_state", "09_WORLD_MODEL/world_state.py")
+world_env_mod = load_module("world_env", "09_WORLD_MODEL/environments/world.py")
 
 WorldTime = world_time_mod.WorldTime
 WorldState = world_state_mod.WorldState
+World = world_env_mod.World
 
 # --------------------------------------------------
 # LOAD LIFE LOOP
@@ -43,7 +45,8 @@ LifeLoop = life_loop_mod.LifeLoop
 # --------------------------------------------------
 if "life" not in st.session_state:
     world_time = WorldTime()
-    world_state = WorldState()
+    world_state = WorldState(default_place="house_01")
+    st.session_state.world_env = World.create(world_state=world_state)
     st.session_state.life = LifeLoop(world_time, world_state)
 
 if "run_ticks_remaining" not in st.session_state:

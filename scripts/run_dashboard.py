@@ -28,6 +28,10 @@ world_mod = load_module(
     "world_state",
     "09_WORLD_MODEL/world_state.py",
 )
+world_env_mod = load_module(
+    "world_env",
+    "09_WORLD_MODEL/environments/world.py",
+)
 memory_mod = load_module(
     "episodic",
     "07_MEMORY_SYSTEM/episodic.py",
@@ -52,6 +56,7 @@ WebDashboard = visual_mod.WebDashboard
 IntrospectionSnapshot = snapshot_mod.IntrospectionSnapshot
 
 WorldState = world_mod.WorldState
+World = world_env_mod.World
 EpisodicMemory = memory_mod.EpisodicMemory
 AttentionSystem = attention_mod.AttentionSystem
 Predictor = prediction_mod.Predictor
@@ -59,7 +64,8 @@ Council = council_mod.Council
 
 
 def build_system():
-    world = WorldState()
+    world = WorldState(default_place="house_01")
+    World.create(world_state=world)
     memory = EpisodicMemory(capacity=20)
     attention = AttentionSystem(memory, focus_size=5)
     predictor = Predictor(world, memory)
