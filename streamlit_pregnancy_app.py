@@ -5,6 +5,7 @@ A7DO — Pregnancy & Fetal Development (Streamlit UI)
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 import streamlit as st
 
 
@@ -46,6 +47,46 @@ def build_life_support_table() -> list[dict[str, str]]:
         {"System": "Umbilical Cord", "State": "PRIMARY_LIFE_SUPPORT"},
         {"System": "Energy Source", "State": "EXTERNAL"},
     ]
+
+
+def build_ecg_series(postnatal_days: int, points: int = 140) -> list[float]:
+    base = 110 + min(postnatal_days, 30) * 0.2
+    series = []
+    for idx in range(points):
+        drift = 6 * math.sin((idx + postnatal_days) / 6.5)
+        flutter = 3 * math.sin((idx + postnatal_days) / 2.9)
+        heartbeat = base + drift + flutter
+        series.append(max(85, min(160, heartbeat)))
+    return series
+
+
+def build_postnatal_growth(postnatal_days: int) -> dict[str, float | int]:
+    return {
+        "age_days": postnatal_days,
+        "brain": round(1.0 + postnatal_days * 0.003, 3),
+        "spine": round(1.1 + postnatal_days * 0.002, 3),
+        "nervous": round(1.0 + postnatal_days * 0.003, 3),
+        "limb_strength": round(0.45 + postnatal_days * 0.0015, 3),
+    }
+
+
+def build_neonatal_physiology(postnatal_days: int) -> dict[str, float | bool]:
+    energy = 20 + min(postnatal_days, 30) * 0.08
+    fatigue = max(0.15, 0.65 - postnatal_days * 0.01)
+    return {
+        "energy": round(energy, 2),
+        "fatigue": round(fatigue, 3),
+        "awake": postnatal_days > 1,
+    }
+
+
+def build_external_regulation(postnatal_days: int) -> dict[str, float]:
+    return {
+        "heartbeat_bpm": round(70 + min(postnatal_days, 30) * 0.12, 1),
+        "warmth": round(0.7 + min(postnatal_days, 14) * 0.01, 2),
+        "feeding_rate": round(0.18 + min(postnatal_days, 20) * 0.004, 3),
+        "calming": round(0.28 + min(postnatal_days, 20) * 0.005, 3),
+    }
 
 
 def build_prenatal_body_table(trimester: int) -> list[dict[str, str]]:
@@ -183,6 +224,8 @@ st.markdown(
 init_state()
 
 snapshot = st.session_state.pregnancy
+birth_weeks = 40
+postnatal_days = max(0, snapshot.biological_days - (birth_weeks * 7))
 
 st.title("🧬 A7DO — Pregnancy & Fetal Development")
 
@@ -243,12 +286,46 @@ st.dataframe(
 )
 
 st.subheader("🎂 Birth Status")
-if snapshot.trimester == 3:
+if snapshot.gestational_weeks >= birth_weeks:
     st.success("Birth threshold reached — LifeLoop may initialize.")
+    st.markdown(
+        "<div class='section-card'>"
+        "<strong>Transition</strong><br>"
+        "Maternal field ➜ placental support ➜ birth ➜ neonatal regulation ➜ "
+        "independent life."
+        "</div>",
+        unsafe_allow_html=True,
+    )
 else:
-    remaining = max(0, int(40 - snapshot.gestational_weeks))
+    remaining = max(0, int(birth_weeks - snapshot.gestational_weeks))
     st.info(
         f"Estimated weeks until birth: {remaining}"
+    )
+
+st.subheader("🌍 External World Activation")
+if snapshot.gestational_weeks >= birth_weeks:
+    st.markdown(
+        "<div class='section-card'>"
+        "<strong>Neonatal Life Online</strong><br>"
+        "External sensors, caregiver regulation, and ECG monitoring now active."
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    st.subheader("❤️ ECG (Heart Rate)")
+    st.line_chart(build_ecg_series(postnatal_days))
+    neonatal_left, neonatal_right = st.columns(2)
+    with neonatal_left:
+        st.subheader("🧠 Postnatal Growth")
+        st.json(build_postnatal_growth(postnatal_days))
+        st.subheader("🤱 External Regulation (MotherBot)")
+        st.json(build_external_regulation(postnatal_days))
+    with neonatal_right:
+        st.subheader("🩺 Physiology")
+        st.json(build_neonatal_physiology(postnatal_days))
+else:
+    st.info(
+        "External world interfaces remain locked. "
+        "ECG monitoring and neonatal regulation activate at birth."
     )
 
 st.caption(
