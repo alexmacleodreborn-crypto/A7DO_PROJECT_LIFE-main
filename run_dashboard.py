@@ -45,7 +45,7 @@ LifeLoop = life_loop_mod.LifeLoop
 # --------------------------------------------------
 if "life" not in st.session_state:
     world_time = WorldTime()
-    world_state = WorldState(default_place="house_01")
+    world_state = WorldState(default_place="house")
     st.session_state.world_env = World.create(world_state=world_state)
     st.session_state.life = LifeLoop(world_time, world_state)
 

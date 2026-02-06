@@ -43,7 +43,7 @@ class World:
     def create(
         cls,
         world_state: Optional[object] = None,
-        default_place: Optional[str] = "house_01",
+        default_place: Optional[str] = "house",
     ) -> "World":
         world = cls(
             home=HomeEnvironment(),

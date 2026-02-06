@@ -59,8 +59,22 @@ PLACES: Dict[str, Place] = {
 }
 
 
+PLACE_ALIASES: Dict[str, str] = {
+    "house": "house_01",
+    "street": "street_01",
+    "market": "market_01",
+    "park": "park_01",
+    "hospital": "hospital_01",
+}
+
+
 def get_place(place_id: str) -> Optional[Place]:
     """
     Resolve a place by ID.
     """
-    return PLACES.get(place_id)
+    if place_id in PLACES:
+        return PLACES[place_id]
+    alias = PLACE_ALIASES.get(place_id)
+    if alias is None:
+        return None
+    return PLACES.get(alias)
