@@ -12,3 +12,13 @@ class Muscle:
         if effort > self.strength:
             raise RuntimeError("Muscle overload")
         return effort
+
+
+class Muscles:
+    """
+    Aggregate muscle groups for the body.
+    """
+
+    def __init__(self):
+        self.axial = Muscle(strength=0.5)
+        self.limbs = Muscle(strength=0.5)
