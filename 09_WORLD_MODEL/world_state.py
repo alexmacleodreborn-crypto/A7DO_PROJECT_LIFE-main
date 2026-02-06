@@ -5,7 +5,7 @@ class WorldState:
     NO learning, NO planning, NO decisions.
     """
 
-    def __init__(self):
+    def __init__(self, default_place=None):
         self._state = {
             "energy": None,
             "strain": None,
@@ -15,6 +15,8 @@ class WorldState:
             "current_place": None,
             "known_places": [],
         }
+        if default_place is not None:
+            self.update_location(default_place)
 
     def update(self, **kwargs):
         """
