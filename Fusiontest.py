@@ -81,6 +81,15 @@ current_hold = 0.0
 in_stable = False
 state_start = None
 
+
+def match_existing_state(z_mean, s_mean, states, tol=0.05):
+    for i, st in enumerate(states):
+        dz = abs(st["Z_mean"] - z_mean)
+        ds = abs(st["Sigma_mean"] - s_mean)
+        if dz < tol and ds < tol:
+            return i
+    return None
+
 # =========================================================
 # UI placeholders
 # =========================================================
@@ -134,11 +143,20 @@ for i in range(300):
             state_start = t - T_hold
     else:
         if in_stable:
-            stable_states.append(dict(
-                Z_mean=Z.iloc[-int(T_hold / step_delay):].mean(),
-                Sigma_mean=Sigma.iloc[-int(T_hold / step_delay):].mean(),
-                Duration=t - state_start
-            ))
+            z_mean = Z.iloc[-int(T_hold / step_delay):].mean()
+            s_mean = Sigma.iloc[-int(T_hold / step_delay):].mean()
+            duration = t - state_start
+            match_idx = match_existing_state(z_mean, s_mean, stable_states)
+            if match_idx is None:
+                stable_states.append(dict(
+                    Z_mean=z_mean,
+                    Sigma_mean=s_mean,
+                    Duration=duration,
+                    Visits=1
+                ))
+            else:
+                stable_states[match_idx]["Duration"] += duration
+                stable_states[match_idx]["Visits"] += 1
         in_stable = False
         current_hold = 0.0
 
