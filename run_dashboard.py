@@ -7,10 +7,12 @@ import importlib.util
 import random
 import re
 import time
+from types import SimpleNamespace
 
 import streamlit as st
 from pathlib import Path
 
+from english_core_curriculum import run_core_english_curriculum
 # --------------------------------------------------
 # PROJECT ROOT
 # --------------------------------------------------
@@ -76,6 +78,7 @@ if "english_init" not in st.session_state:
     st.session_state.english_vocab = {}
     st.session_state.english_concepts = {}
     st.session_state.english_patterns = {}
+    st.session_state.english_identity = {}
 
     # Emergence
     st.session_state.english_invited = False
@@ -170,6 +173,13 @@ def advance_english_learning() -> float:
     absorb_words(random.sample(BASIC_WORDS, k=3))
     absorb_sentence(random.choice(SENTENCE_PATTERNS))
     absorb_words(random.sample(CONNECTORS, k=1), weight=0.02)
+    state = SimpleNamespace(
+        vocab=st.session_state.english_vocab,
+        concepts=st.session_state.english_concepts,
+        patterns=st.session_state.english_patterns,
+        identity=st.session_state.english_identity,
+    )
+    run_core_english_curriculum(state)
 
     understanding = language_understanding()
     st.session_state.english_age += 1
