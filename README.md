@@ -39,6 +39,20 @@ print(module.A7DO_BORN_PERSON_WORLD.describe_world())
 
 ---
 
+## Streamlit learning demos
+
+Run the Streamlit pregnancy growth model:
+
+```bash
+streamlit run streamlit_pregnancy_app.py
+```
+
+Run the English language learning extension:
+
+```bash
+streamlit run streamlit_english_learning_app.py
+```
+
 # Genesis & World — A7DO Foundational Law
 
 ## 1. Genesis (Origin of the Organism)
