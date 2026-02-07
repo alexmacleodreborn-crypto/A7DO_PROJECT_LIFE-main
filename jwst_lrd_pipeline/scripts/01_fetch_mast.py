@@ -15,6 +15,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Download JWST LRD data from MAST.")
     parser.add_argument("--targets", required=True, help="CSV of LRD targets.")
     parser.add_argument("--outdir", required=True, help="Output directory for downloads.")
+    parser.add_argument(
+        "--include-rate",
+        action="store_true",
+        help="Include Stage-0 rate/rateints products for full pipeline reprocessing.",
+    )
     return parser.parse_args()
 
 
@@ -46,9 +51,13 @@ def main() -> None:
             continue
 
         products = Observations.get_product_list(filtered)
+        product_groups = ["s2d", "x1d", "cal"]
+        if args.include_rate:
+            product_groups.extend(["rate", "rateints"])
+
         calibrated = Observations.filter_products(
             products,
-            productSubGroupDescription=["s2d", "x1d", "cal"],
+            productSubGroupDescription=product_groups,
             extension=["fits"],
         )
 
