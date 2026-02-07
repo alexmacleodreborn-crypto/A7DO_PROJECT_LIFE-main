@@ -52,6 +52,9 @@ if "life" not in st.session_state:
 if "run_ticks_remaining" not in st.session_state:
     st.session_state.run_ticks_remaining = 0
 
+if "dashboard_messages" not in st.session_state:
+    st.session_state.dashboard_messages = []
+
 life = st.session_state.life
 
 # --------------------------------------------------
@@ -106,3 +109,22 @@ st.json(life.memory.recent(5))
 
 st.subheader("❤️ Pulse")
 st.write("Alive:", life.pulse.is_alive())
+
+st.subheader("⌨️ Keyboard Message")
+message_text = st.text_input("Type a message for the dashboard", key="dashboard_message_input")
+if st.button("Send Message"):
+    cleaned_message = message_text.strip()
+    if cleaned_message:
+        st.session_state.dashboard_messages.append(
+            {
+                "timestamp": life.clock.now(),
+                "message": cleaned_message,
+            }
+        )
+        st.session_state.dashboard_message_input = ""
+
+st.subheader("📨 Dashboard Messages")
+if st.session_state.dashboard_messages:
+    st.json(st.session_state.dashboard_messages)
+else:
+    st.write("No messages yet.")
