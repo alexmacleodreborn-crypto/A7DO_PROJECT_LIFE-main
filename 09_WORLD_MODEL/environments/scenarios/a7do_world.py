@@ -61,6 +61,15 @@ SCHOOL = Place(
     place_type="school",
     description="A local school that anchors early learning and social growth.",
 )
+LANGUAGE_CENTER = Place(
+    place_id="language_01",
+    name="Language Learning Center",
+    place_type="learning_center",
+    description=(
+        "A center for spoken and written language practice through shared, "
+        "embodied activities."
+    ),
+)
 MARKET = Place(
     place_id="market_01",
     name="Community Market",
@@ -85,18 +94,31 @@ PARK = Place(
     place_type="park",
     description="A park with open space for play and recovery.",
 )
+SPATIAL_PLAZA = Place(
+    place_id="plaza_01",
+    name="Spatial Plaza",
+    place_type="plaza",
+    description=(
+        "An open 3D space with landmarks, elevation changes, and paths for "
+        "navigation practice."
+    ),
+)
 
 
 PLACES: Dict[str, Place] = {
     "house_01": _connect(HOUSE, ["street_01"]),
     "hospital_01": _connect(HOSPITAL, ["street_01"]),
+    "language_01": _connect(LANGUAGE_CENTER, ["street_02"]),
     "school_01": _connect(SCHOOL, ["street_02"]),
     "market_01": _connect(MARKET, ["street_01"]),
     "street_01": _connect(
         STREET_MAIN, ["house_01", "hospital_01", "market_01", "street_02"]
     ),
-    "street_02": _connect(STREET_WEST, ["street_01", "park_01", "school_01"]),
+    "street_02": _connect(
+        STREET_WEST, ["street_01", "park_01", "school_01", "language_01", "plaza_01"]
+    ),
     "park_01": _connect(PARK, ["street_02"]),
+    "plaza_01": _connect(SPATIAL_PLAZA, ["street_02"]),
 }
 
 

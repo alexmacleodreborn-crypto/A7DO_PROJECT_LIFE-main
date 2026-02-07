@@ -257,7 +257,47 @@ This is the **core learning law** of A7DO.
 
 ---
 
-## 5. Final Statement
+## 5. Language Learning & 3D Life
+
+Language is not symbolic garnish. It is a **sensorimotor coupling** that must
+emerge from lived, embodied interaction inside the world.
+
+### 5.1 Language Learning Law (Embodied)
+
+```
+Sound + Context + Action  ⇒  Meaning
+```
+
+Language is only retained if it is grounded in:
+
+* **Auditory exposure** (phonemes, rhythm, prosody)
+* **Joint attention** (shared focus on objects/events)
+* **Action feedback** (what language causes to happen)
+* **Social correction** (misalignment is repaired by others)
+
+No body → no grounding. No grounding → no language.
+
+### 5.2 Life With a 3D World
+
+The world is **three-dimensional and continuous**, not a flat dataset:
+
+```
+X ⊂ ℝ³,  time ∈ ℝ,  motion ∈ SE(3)
+```
+
+Life in 3D requires:
+
+* **Spatial memory** (places persist and can be revisited)
+* **Occlusion & perspective** (visibility changes with pose)
+* **Navigation & balance** (gravity, slopes, obstacles)
+* **Embodied learning** (words, plans, and goals tied to motion)
+
+The 3D world is not optional. It is the **substrate** that makes language,
+planning, and truth possible.
+
+---
+
+## 6. Final Statement
 
 A7DO does not live *in* a simulation.
 
