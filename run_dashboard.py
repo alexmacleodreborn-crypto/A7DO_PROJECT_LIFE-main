@@ -4,8 +4,6 @@ Manual Tick Control (Authoritative Time Boundary)
 """
 
 import importlib.util
-import random
-import re
 import time
 
 import streamlit as st
@@ -33,6 +31,15 @@ world_env_mod = load_module("world_env", "09_WORLD_MODEL/environments/world.py")
 WorldTime = world_time_mod.WorldTime
 WorldState = world_state_mod.WorldState
 World = world_env_mod.World
+
+# --------------------------------------------------
+# LOAD ENGLISH LEARNING
+# --------------------------------------------------
+english_mod = load_module(
+    "english_learning",
+    "12_INTERFACE_AND_OBSERVABILITY/english_learning.py",
+)
+EnglishLearning = english_mod.EnglishLearning
 
 # --------------------------------------------------
 # LOAD LIFE LOOP
@@ -63,147 +70,18 @@ life = st.session_state.life
 # --------------------------------------------------
 # ENGLISH LEARNING STATE
 # --------------------------------------------------
-if "english_init" not in st.session_state:
-    st.session_state.english_init = True
-
-    # Development
-    st.session_state.english_age = 0
-    st.session_state.english_K = 0.2
-    st.session_state.english_I = 0.1
-    st.session_state.english_intent = 0.0
-
-    # Language learning
-    st.session_state.english_vocab = {}
-    st.session_state.english_concepts = {}
-    st.session_state.english_patterns = {}
-
-    # Emergence
-    st.session_state.english_invited = False
-    st.session_state.english_expression_ready = False
-    st.session_state.english_first_output = None
-    st.session_state.english_last_status = "idle"
-
-    # Conversation
-    st.session_state.english_chat = []
-
-# --------------------------------------------------
-# ENGLISH LEARNING DATA
-# --------------------------------------------------
-BASIC_WORDS = [
-    "i",
-    "you",
-    "we",
-    "he",
-    "she",
-    "it",
-    "hello",
-    "name",
-    "birthday",
-    "school",
-    "like",
-    "love",
-    "see",
-    "go",
-    "have",
-    "am",
-    "is",
-    "are",
-    "play",
-    "learn",
-    "friend",
-    "people",
-    "today",
-    "happy",
-    "blue",
-    "music",
-    "talk",
-]
-
-SENTENCE_PATTERNS = [
-    "i am here",
-    "you are here",
-    "we are together",
-    "i like music",
-    "i go to school",
-    "today is a good day",
-    "i am learning english",
-    "people talk to each other",
-    "friends help each other",
-]
-
-CONNECTORS = ["and", "because", "when", "but"]
-LEARNING_ENERGY_COST = 0.2
+english_learning = EnglishLearning(st.session_state)
 
 
-def tokenize(text: str) -> list[str]:
-    return re.findall(r"[a-z']+", text.lower())
-
-
-def absorb_words(words: list[str], weight: float = 0.03) -> None:
-    for word in words:
-        st.session_state.english_vocab[word] = (
-            st.session_state.english_vocab.get(word, 0) + 1
-        )
-        st.session_state.english_concepts[word] = (
-            st.session_state.english_concepts.get(word, 0) + weight
-        )
-
-
-def absorb_sentence(sentence: str) -> None:
-    words = tokenize(sentence)
-    absorb_words(words, weight=0.05)
-
-    pattern = tuple(words)
-    st.session_state.english_patterns[pattern] = (
-        st.session_state.english_patterns.get(pattern, 0) + 1
-    )
-
-
-def language_understanding() -> float:
-    if not st.session_state.english_concepts:
-        return 0.0
-    stable = sum(
-        1 for value in st.session_state.english_concepts.values() if value > 0.6
-    )
-    return stable / len(st.session_state.english_concepts)
-
-
-def advance_english_learning(life_loop: LifeLoop) -> float:
-    if not life_loop.pulse.is_alive():
-        st.session_state.english_last_status = "blocked: pulse inactive"
-        return language_understanding()
-
+def energy_gate() -> str:
+    if not life.pulse.is_alive():
+        return "blocked: pulse inactive"
     try:
-        life_loop.physics.allow(LEARNING_ENERGY_COST, life_loop.energy.level())
+        life.physics.allow(english_learning.energy_cost, life.energy.level())
     except Exception:
-        st.session_state.english_last_status = "blocked: insufficient energy"
-        return language_understanding()
-
-    life_loop.energy.spend(LEARNING_ENERGY_COST)
-    absorb_words(random.sample(BASIC_WORDS, k=3))
-    absorb_sentence(random.choice(SENTENCE_PATTERNS))
-    absorb_words(random.sample(CONNECTORS, k=1), weight=0.02)
-
-    understanding = language_understanding()
-    st.session_state.english_age += 1
-    st.session_state.english_I = min(
-        1.0, st.session_state.english_I + 0.01 + understanding * 0.02
-    )
-    st.session_state.english_K += 0.03 * st.session_state.english_I
-    st.session_state.english_intent += 0.04 * understanding
-
-    if not st.session_state.english_invited and st.session_state.english_K >= 1.2:
-        st.session_state.english_invited = True
-
-    if (
-        st.session_state.english_invited
-        and not st.session_state.english_expression_ready
-        and (understanding >= 0.4 or st.session_state.english_age > 60)
-    ):
-        st.session_state.english_expression_ready = True
-
-    st.session_state.english_last_status = "advanced"
-    return understanding
+        return "blocked: insufficient energy"
+    life.energy.spend(english_learning.energy_cost)
+    return "ok"
 
 # --------------------------------------------------
 # SIDEBAR CONTROLS
@@ -212,7 +90,7 @@ st.sidebar.title("🧠 A7DO Control")
 
 if st.sidebar.button("🔘 Tick (1)"):
     life.tick()
-    advance_english_learning(life)
+    english_learning.advance(energy_gate)
 
 run_n = st.sidebar.number_input(
     "Run N ticks",
@@ -233,7 +111,7 @@ if st.sidebar.button("⏸ Pause"):
 # --------------------------------------------------
 if st.session_state.run_ticks_remaining > 0:
     life.tick()
-    advance_english_learning(life)
+    english_learning.advance(energy_gate)
     st.session_state.run_ticks_remaining -= 1
     time.sleep(0.05)
     st.rerun()
@@ -287,25 +165,23 @@ else:
 st.divider()
 st.subheader("🧠 English Language Learning")
 
-understanding = language_understanding()
-st.write(f"**Energy Cost / Cycle:** {LEARNING_ENERGY_COST:.2f}")
-st.write(
-    f"**Learning Status:** {st.session_state.get('english_last_status', 'idle')}"
-)
-st.write(f"**Age (cycles):** {st.session_state.english_age}")
-st.write(f"**Portal Score K:** {st.session_state.english_K:.2f}")
-st.write(f"**Language Understanding:** {understanding:.2f}")
-st.write(f"**Vocabulary Size:** {len(st.session_state.english_vocab)}")
-st.write(f"**Sentence Patterns Learned:** {len(st.session_state.english_patterns)}")
-st.write(f"**Intent:** {st.session_state.english_intent:.2f}")
+metrics = english_learning.metrics()
+st.write(f"**Energy Cost / Cycle:** {english_learning.energy_cost:.2f}")
+st.write(f"**Learning Status:** {metrics['last_status']}")
+st.write(f"**Age (cycles):** {metrics['age']}")
+st.write(f"**Portal Score K:** {metrics['K']:.2f}")
+st.write(f"**Language Understanding:** {metrics['understanding']:.2f}")
+st.write(f"**Vocabulary Size:** {metrics['vocab_size']}")
+st.write(f"**Sentence Patterns Learned:** {metrics['pattern_count']}")
+st.write(f"**Intent:** {metrics['intent']:.2f}")
 
 st.caption("Learning is advanced on each life tick, or manually using the button below.")
 if st.button("Advance Language Cycle"):
-    understanding = advance_english_learning(life)
+    english_learning.advance(energy_gate)
 
 st.info("📘 Learning English continuously: words, sentences, and structure.")
 
-if st.session_state.english_invited:
+if english_learning.is_invited():
     st.success("📨 A7DO is ready to speak with you")
 
     with st.form("english_chat_form", clear_on_submit=True):
@@ -313,43 +189,25 @@ if st.session_state.english_invited:
         send = st.form_submit_button("Send")
 
     if send and user_msg:
-        absorb_sentence(user_msg)
-        st.session_state.english_chat.append(("You", user_msg))
+        english_learning.add_user_message(user_msg)
 
-        if st.session_state.english_first_output is None:
-            reply = random.choice(
-                [
-                    "I am listening.",
-                    "I understand you.",
-                    "Please continue.",
-                    "I am learning English.",
-                ]
-            )
-        else:
-            reply = "I remember what you said."
-
-        st.session_state.english_chat.append(("A7DO", reply))
-
-    for speaker, message in st.session_state.english_chat:
+    for speaker, message in english_learning.chat_history():
         st.markdown(f"**{speaker}:** {message}")
 
 st.subheader("🟢 First Expression")
 
-if (
-    st.session_state.english_expression_ready
-    and st.session_state.english_first_output is None
-):
+if english_learning.expression_ready() and english_learning.first_output() is None:
     st.warning("A7DO is ready for a first expression.")
     out = st.text_area("A7DO First Expression", key="english_first_expression")
 
     if out:
-        st.session_state.english_first_output = out
+        english_learning.set_first_output(out)
 
-elif st.session_state.english_first_output:
+elif english_learning.first_output():
     st.success("First expression captured.")
     st.text_area(
         "A7DO Output",
-        st.session_state.english_first_output,
+        english_learning.first_output(),
         disabled=True,
         key="english_output",
     )
