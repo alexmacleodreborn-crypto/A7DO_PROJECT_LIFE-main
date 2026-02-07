@@ -9,7 +9,6 @@ import importlib.util
 from pathlib import Path
 import random
 import re
-from streamlit_autorefresh import st_autorefresh
 
 # --------------------------------------------------
 # PROJECT ROOT
@@ -31,10 +30,12 @@ def load_module(name: str, relative_path: str):
 world_time_mod = load_module("world_time", "09_WORLD_MODEL/time.py")
 world_state_mod = load_module("world_state", "09_WORLD_MODEL/world_state.py")
 world_env_mod = load_module("world_env", "09_WORLD_MODEL/environments/world.py")
+body_mod = load_module("body_model", "03_BODY_SYSTEM/body.py")
 
 WorldTime = world_time_mod.WorldTime
 WorldState = world_state_mod.WorldState
 World = world_env_mod.World
+DevelopmentalBody = body_mod.DevelopmentalBody
 
 # --------------------------------------------------
 # LOAD LIFE LOOP
@@ -61,6 +62,9 @@ if "dashboard_messages" not in st.session_state:
     st.session_state.dashboard_messages = []
 
 life = st.session_state.life
+
+if "body_model" not in st.session_state:
+    st.session_state.body_model = DevelopmentalBody(stage="birth")
 
 if "english_init" not in st.session_state:
     st.session_state.english_init = True
@@ -136,19 +140,21 @@ def language_understanding() -> float:
     return stable / len(st.session_state.english_concepts)
 
 
-def english_learning_step() -> float:
+def english_learning_step(comfort: float = 1.0) -> float:
     absorb_words(random.sample(BASIC_WORDS, k=3))
     absorb_sentence(random.choice(SENTENCE_PATTERNS))
     absorb_words(random.sample(CONNECTORS, k=1), weight=0.02)
 
     understanding = language_understanding()
+    learning_multiplier = 0.5 + 0.5 * comfort
+    effective_understanding = understanding * learning_multiplier
     st.session_state.english_age += 1
     st.session_state.english_i = min(
         1.0,
-        st.session_state.english_i + 0.01 + understanding * 0.02,
+        st.session_state.english_i + 0.01 * learning_multiplier + effective_understanding * 0.02,
     )
     st.session_state.english_k += 0.03 * st.session_state.english_i
-    st.session_state.english_intent += 0.04 * understanding
+    st.session_state.english_intent += 0.04 * effective_understanding
 
     if not st.session_state.english_invited and st.session_state.english_k >= 1.2:
         st.session_state.english_invited = True
@@ -156,11 +162,11 @@ def english_learning_step() -> float:
     if (
         st.session_state.english_invited
         and not st.session_state.english_expression_ready
-        and (understanding >= 0.4 or st.session_state.english_age > 60)
+        and (effective_understanding >= 0.4 or st.session_state.english_age > 60)
     ):
         st.session_state.english_expression_ready = True
 
-    return understanding
+    return effective_understanding
 
 # --------------------------------------------------
 # SIDEBAR CONTROLS
@@ -198,6 +204,10 @@ if st.session_state.run_ticks_remaining > 0:
 # --------------------------------------------------
 st.title("🧠 A7DO — Live Introspection Dashboard")
 
+body_model = st.session_state.body_model
+body_model.update(load=random.uniform(0.0, 0.2))
+body_snapshot = body_model.snapshot()
+
 tab_dashboard, tab_english = st.tabs(["🔭 Dashboard", "📘 English Learning"])
 
 with tab_dashboard:
@@ -211,6 +221,9 @@ with tab_dashboard:
         "time_real": life.clock.now(),
         "time_world": life.world_time.t,
     })
+
+    st.subheader("🫀 Developmental Body State")
+    st.json(body_snapshot)
 
     st.subheader("🧠 Recent Memory")
     st.json(life.memory.recent(5))
@@ -241,8 +254,17 @@ with tab_dashboard:
         st.write("No messages yet.")
 
 with tab_english:
-    st_autorefresh(interval=600, limit=None, key="a7do_english_clock")
-    understanding_score = english_learning_step()
+    auto_advance = st.checkbox(
+        "Auto-advance learning each refresh",
+        value=True,
+        key="english_auto_advance",
+    )
+    manual_advance = st.button("Advance learning cycle")
+
+    if auto_advance or manual_advance:
+        understanding_score = english_learning_step(comfort=body_snapshot["comfort"])
+    else:
+        understanding_score = language_understanding()
 
     st.subheader("🧠 A7DO — English Language Learning")
     st.write(f"**Age (cycles):** {st.session_state.english_age}")
