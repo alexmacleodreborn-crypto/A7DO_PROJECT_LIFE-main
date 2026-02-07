@@ -247,8 +247,9 @@ st.subheader("❤️ Pulse")
 st.write("Alive:", life.pulse.is_alive())
 
 st.subheader("⌨️ Keyboard Message")
-message_text = st.text_input("Type a message for the dashboard", key="dashboard_message_input")
-if st.button("Send Message"):
+
+def send_dashboard_message() -> None:
+    message_text = st.session_state.get("dashboard_message_input", "")
     cleaned_message = message_text.strip()
     if cleaned_message:
         st.session_state.dashboard_messages.append(
@@ -257,7 +258,11 @@ if st.button("Send Message"):
                 "message": cleaned_message,
             }
         )
-        st.session_state.dashboard_message_input = ""
+    st.session_state.dashboard_message_input = ""
+
+
+st.text_input("Type a message for the dashboard", key="dashboard_message_input")
+st.button("Send Message", on_click=send_dashboard_message)
 
 st.subheader("📨 Dashboard Messages")
 if st.session_state.dashboard_messages:
