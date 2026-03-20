@@ -1,0 +1,8 @@
+astropy>=6.0
+astroquery>=0.4.7
+specutils>=1.15
+numpy>=1.26
+scipy>=1.11
+matplotlib>=3.8
+pandas>=2.2
+emcee>=3.1
