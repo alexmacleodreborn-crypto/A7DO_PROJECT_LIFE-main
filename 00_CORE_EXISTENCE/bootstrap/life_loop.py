@@ -109,6 +109,28 @@ ToddlerStage = toddler_mod.ToddlerStage
 ChildStage = child_mod.ChildStage
 AdolescentStage = adolescent_mod.AdolescentStage
 AdultStage = adult_mod.AdultStage
+WorldTime = load_module("world_time", "09_WORLD_MODEL/time.py").WorldTime
+WorldState = load_module("world_state", "09_WORLD_MODEL/world_state.py").WorldState
+AttentionSystem = load_module(
+    "attention",
+    "06_LIMBIC_AND_VALUE_SYSTEM/attention.py",
+).AttentionSystem
+ActionEnergyLearner = load_module(
+    "energy_learning",
+    "03_BODY_SYSTEM/motor_control/energy_learning.py",
+).ActionEnergyLearner
+Predictor = load_module(
+    "predictor",
+    "09_WORLD_MODEL/prediction.py",
+).Predictor
+Council = load_module(
+    "council",
+    "10_MULTI_AGENT_COUNCIL/council.py",
+).Council
+IntrospectionSnapshot = load_module(
+    "snapshot",
+    "12_INTERFACE_AND_OBSERVABILITY/snapshot.py",
+).IntrospectionSnapshot
 
 
 class LifeLoop:
@@ -117,7 +139,7 @@ class LifeLoop:
     World dependencies are injected (no nested loaders).
     """
 
-    def __init__(self, world_time, world_state, stage_schedule=None):
+    def __init__(self, world_time=None, world_state=None, stage_schedule=None):
         # Core
         self.identity = SelfIdentity()
         self.clock = SystemClock()      # real-world elapsed time
@@ -127,8 +149,8 @@ class LifeLoop:
         self.internal_time = 0
 
         # Injected world
-        self.world_time = world_time
-        self.world = world_state
+        self.world_time = world_time or WorldTime()
+        self.world = world_state or WorldState()
 
         # Physics / metabolism
         self.physics = PhysicsGate()
@@ -147,6 +169,23 @@ class LifeLoop:
 
         # Memory
         self.memory = EpisodicMemory()
+        self.salience = {}
+        self.attention = AttentionSystem(self.memory, focus_size=5)
+        self.energy_learner = ActionEnergyLearner()
+        self.predictor = Predictor(self.world, self.memory)
+        self.council = Council(
+            self.world,
+            self.memory,
+            self.predictor,
+            self.attention,
+        )
+        self.snapshot = IntrospectionSnapshot(
+            self.world,
+            self.memory,
+            self.attention,
+            self.predictor,
+            self.council,
+        )
 
         # Lifecycle / development
         self.lifecycle = LifecycleManager()
@@ -164,14 +203,16 @@ class LifeLoop:
         }
 
         self._stage_schedule = stage_schedule or [
-            (0, LifeStage.WOMB),
-            (5, LifeStage.BIRTH),
-            (10, LifeStage.INFANT),
-            (20, LifeStage.TODDLER),
-            (30, LifeStage.CHILD),
-            (40, LifeStage.ADOLESCENT),
-            (50, LifeStage.ADULT),
+            (0, LifeStage.ADULT),
         ]
+
+    def record_memory(self, event: dict, salience: float = 0.0):
+        self.physics.allow(0.1, self.energy.level())
+        self.energy.spend(0.1)
+        record = self.memory.record(event, salience=salience)
+        memory_id = f"{event.get('type', 'event')}_{record['time']}"
+        self.salience[memory_id] = salience
+        return record
 
     def _current_development(self):
         return self._development_by_stage.get(self.lifecycle.stage)
@@ -230,12 +271,29 @@ class LifeLoop:
             # World evolves independently
             self.world_time.tick(delta=1.0)
 
+            regulation = self.regulator.regulate()
+            if regulation in {"rest", "reduce_activity"}:
+                self.recovery.rest(1.0)
+                self.overload.recover(0.15)
+
+            current_weather = (
+                "storm"
+                if self.internal_time % 7 == 0
+                else "clear"
+            )
+            current_light = "day" if self.internal_time % 10 < 6 else "night"
+
             # A7DO samples world here
             action = None
             self.world.update(
                 energy=self.energy.level(),
                 strain=self.overload.strain,
                 last_action=action,
+                last_sensation={
+                    "weather": current_weather,
+                    "light": current_light,
+                    "regulation": regulation,
+                },
                 time=self.world_time.t,
             )
 
@@ -272,17 +330,30 @@ class LifeLoop:
 
                 # Record experienced world
                 if self._memory_allowed(allowed):
-                    self.memory.record({
-                        "type": "pain_withdrawal",
-                        "body_state": body_state,
-                        "world": self.world.snapshot(),
-                        "time_internal": self.internal_time,
-                        "time_real": real_time,
-                        "time_world": self.world_time.t,
-                    })
+                    self.record_memory(
+                        {
+                            "type": "pain_withdrawal",
+                            "strain": self.overload.strain,
+                            "body_state": body_state,
+                            "world": self.world.snapshot(),
+                            "time_internal": self.internal_time,
+                            "time_real": real_time,
+                            "time_world": self.world_time.t,
+                        },
+                        salience=min(1.0, 0.5 + self.overload.strain),
+                    )
+
+            self.energy_learner.learn(self.attention.focus())
 
             # Load accumulates after action
             self.overload.apply_load(0.1)
+
+            self.world.update(
+                energy=self.energy.level(),
+                strain=self.overload.strain,
+                last_action=action,
+                time=self.world_time.t,
+            )
 
             # Memory decay
             if self._memory_allowed(allowed):

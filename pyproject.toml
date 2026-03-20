@@ -1,0 +1,10 @@
+[project]
+name = "a7do-project-life"
+version = "0.1.0"
+description = "A runnable A7DO world simulation assembled from the project subsystem files."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

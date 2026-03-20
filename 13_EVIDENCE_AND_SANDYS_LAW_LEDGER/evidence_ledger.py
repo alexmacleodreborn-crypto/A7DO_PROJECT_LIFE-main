@@ -9,13 +9,14 @@ class EvidenceLedger:
     Append-only evidence ledger with disk persistence (JSONL).
     """
 
-    def __init__(self, path: str = "13_EVIDENCE_AND_SANDYS_LAW_LEDGER/datasets/evidence.jsonl"):
-        self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, path: str | None = None):
+        self.path = Path(path) if path else None
+        if self.path is not None:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
 
         # Load existing events
         self._events = []
-        if self.path.exists():
+        if self.path is not None and self.path.exists():
             with open(self.path, "r") as f:
                 for line in f:
                     self._events.append(json.loads(line))
@@ -48,8 +49,9 @@ class EvidenceLedger:
 
         self._events.append(event)
 
-        with open(self.path, "a") as f:
-            f.write(json.dumps(event) + "\n")
+        if self.path is not None:
+            with open(self.path, "a") as f:
+                f.write(json.dumps(event) + "\n")
 
         return event
 

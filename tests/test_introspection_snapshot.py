@@ -76,5 +76,4 @@ def test_snapshot_contains_all_views():
     assert "memory" in view
     assert "attention" in view
     assert "prediction" in view
-    assert "council" in v
-
+    assert "council" in view

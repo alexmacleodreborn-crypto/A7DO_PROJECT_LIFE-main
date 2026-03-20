@@ -60,6 +60,7 @@ def run_simulation(
     delay: float = 0.2,
     amplitude: float = 0.25,
     omega: float = 0.2,
+    ledger_path: str = "13_EVIDENCE_AND_SANDYS_LAW_LEDGER/datasets/evidence.jsonl",
 ):
     """
     Runs a deterministic sinusoidal world simulation.
@@ -71,7 +72,7 @@ def run_simulation(
     memory = EpisodicMemory(capacity=100)
     predictor = Predictor(world, memory)
 
-    ledger = EvidenceLedger()
+    ledger = EvidenceLedger(path=ledger_path)
     logger = EvidenceLogger(ledger)
 
     # Initial state
