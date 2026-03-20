@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "A7DO CLI Dashboard",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/a7do_environment.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--ticks",
+        "10",
+        "--render-dashboard"
+      ]
+    },
+    {
+      "name": "A7DO Streamlit Dashboard",
+      "type": "python",
+      "request": "launch",
+      "module": "streamlit",
+      "console": "integratedTerminal",
+      "args": [
+        "run",
+        "${workspaceFolder}/run_dashboard.py"
+      ]
+    },
+    {
+      "name": "A7DO Pregnancy App",
+      "type": "python",
+      "request": "launch",
+      "module": "streamlit",
+      "console": "integratedTerminal",
+      "args": [
+        "run",
+        "${workspaceFolder}/streamlit_pregnancy_app.py"
+      ]
+    },
+    {
+      "name": "Pytest",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "console": "integratedTerminal",
+      "args": [
+        "-q"
+      ]
+    }
+  ]
+}

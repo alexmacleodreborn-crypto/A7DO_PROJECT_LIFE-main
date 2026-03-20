@@ -1,0 +1,64 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run A7DO CLI Dashboard",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "a7do_environment.py",
+        "--ticks",
+        "10",
+        "--render-dashboard"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run A7DO Streamlit Dashboard",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "-m",
+        "streamlit",
+        "run",
+        "run_dashboard.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run A7DO Pregnancy App",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "-m",
+        "streamlit",
+        "run",
+        "streamlit_pregnancy_app.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Pytest",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
