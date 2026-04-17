@@ -202,8 +202,17 @@ class LifeLoop:
             LifeStage.ADULT: AdultStage(),
         }
 
+        # Default lifecycle progression intentionally walks through:
+        # pregnancy (womb) -> birth -> infant -> later stages.
+        # internal_time is an abstract developmental clock (ticks).
         self._stage_schedule = stage_schedule or [
-            (0, LifeStage.ADULT),
+            (0, LifeStage.WOMB),
+            (40, LifeStage.BIRTH),
+            (41, LifeStage.INFANT),
+            (365, LifeStage.TODDLER),
+            (365 * 3, LifeStage.CHILD),
+            (365 * 12, LifeStage.ADOLESCENT),
+            (365 * 18, LifeStage.ADULT),
         ]
 
     def record_memory(self, event: dict, salience: float = 0.0):
