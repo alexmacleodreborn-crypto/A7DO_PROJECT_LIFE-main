@@ -303,6 +303,94 @@ def build_cognitive_table(trimester: int) -> list[dict[str, str]]:
     ]
 
 
+def get_human_development_stage(
+    gestational_weeks: float,
+    postnatal_days: int,
+) -> str:
+    if gestational_weeks < 40:
+        return "pregnancy"
+    if postnatal_days < 365:
+        return "born / infant"
+    if postnatal_days < (12 * 365):
+        return "child"
+    if postnatal_days < (18 * 365):
+        return "teen"
+    return "adult"
+
+
+def build_life_stage_timeline(postnatal_days: int) -> list[dict[str, str | int]]:
+    stages = [
+        ("pregnancy", -1),
+        ("born / infant", 0),
+        ("child", 365),
+        ("teen", 12 * 365),
+        ("adult", 18 * 365),
+    ]
+    timeline: list[dict[str, str | int]] = []
+    for label, start_day in stages:
+        if start_day < 0:
+            status = "ONLINE" if postnatal_days < 0 else "COMPLETED"
+            age_hint = "Prenatal"
+        else:
+            status = "LOCKED"
+            if postnatal_days >= start_day:
+                status = "ONLINE"
+            age_hint = f"Postnatal day {start_day}"
+        timeline.append(
+            {
+                "Stage": label,
+                "Starts": age_hint,
+                "Status": status,
+            }
+        )
+    return timeline
+
+
+def build_stage_capabilities(stage: str) -> list[dict[str, str]]:
+    capability_map = {
+        "pregnancy": {
+            "sensors": "forming",
+            "motor": "locked",
+            "memory": "locked",
+            "language": "locked",
+            "metacognition": "locked",
+        },
+        "born / infant": {
+            "sensors": "on",
+            "motor": "reflex / early gross",
+            "memory": "episodic early",
+            "language": "pre-symbolic",
+            "metacognition": "locked",
+        },
+        "child": {
+            "sensors": "on",
+            "motor": "gross + fine emerging",
+            "memory": "episodic + semantic learning",
+            "language": "active growth",
+            "metacognition": "early",
+        },
+        "teen": {
+            "sensors": "on",
+            "motor": "coordinated",
+            "memory": "broad access",
+            "language": "advanced",
+            "metacognition": "on",
+        },
+        "adult": {
+            "sensors": "on",
+            "motor": "full",
+            "memory": "full",
+            "language": "full",
+            "metacognition": "full",
+        },
+    }
+    caps = capability_map[stage]
+    return [
+        {"System": key, "State": value}
+        for key, value in caps.items()
+    ]
+
+
 st.set_page_config(
     page_title="A7DO — Pregnancy & Fetal Development",
     layout="wide",
@@ -349,6 +437,7 @@ snapshot = st.session_state.pregnancy
 birth_weeks = 40
 postnatal_days = max(0, snapshot.biological_days - (birth_weeks * 7))
 is_postnatal = snapshot.gestational_weeks >= birth_weeks
+human_stage = get_human_development_stage(snapshot.gestational_weeks, postnatal_days)
 auto_step_days = max(1, int(round(1 + (snapshot.gestational_weeks / birth_weeks) * 2)))
 
 if is_postnatal and st.session_state.life_loop is None:
@@ -374,6 +463,7 @@ st.markdown(
     "<div class='section-card'>"
     "<strong>Stage</strong><br>"
     f"{stage_label} — Week {snapshot.gestational_weeks:.2f} / Day {snapshot.biological_days}"
+    f"<br><strong>Human development:</strong> {human_stage}"
     "</div>",
     unsafe_allow_html=True,
 )
@@ -407,6 +497,10 @@ metrics = st.columns(3)
 metrics[0].metric("Gestational Weeks", f"{snapshot.gestational_weeks:.2f}")
 metrics[1].metric("Biological Days", f"{snapshot.biological_days}")
 metrics[2].metric("Phase", "Postnatal" if is_postnatal else "Prenatal")
+
+st.subheader("🧬 Human Life Stage Progression")
+st.dataframe(build_life_stage_timeline(postnatal_days if is_postnatal else -1), width="stretch")
+st.dataframe(build_stage_capabilities(human_stage), width="stretch")
 
 st.subheader("ðŸ§­ Linear Development Timeline")
 st.dataframe(
@@ -519,6 +613,14 @@ if is_postnatal:
             })
             st.subheader("Recent Memory")
             st.json(life.memory.recent(5))
+    st.subheader("🧑‍🍼➡️🧒➡️🧑 Teen to Adult View")
+    st.markdown(
+        "<div class='section-card'>"
+        f"Current human stage: <strong>{human_stage}</strong>.<br>"
+        "Progression target: pregnancy ➜ born/infant ➜ child ➜ teen ➜ adult."
+        "</div>",
+        unsafe_allow_html=True,
+    )
 else:
     st.info(
         "External world interfaces remain locked. "
