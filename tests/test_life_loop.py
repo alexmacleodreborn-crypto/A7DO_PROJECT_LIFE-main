@@ -67,7 +67,7 @@ def test_salience_attached_to_memory():
 
 def test_proprioception_only_after_motor():
     LifeLoop = load_life_loop()
-    life = LifeLoop()
+    life = LifeLoop(stage_schedule=[(0, "infant")])
 
     # Force pain condition
     life.overload.strain = 1.0
@@ -94,3 +94,34 @@ def test_physics_gate_blocks_illegal_energy_use():
     life.tick()
 
     assert not life.pulse.is_alive(), "PhysicsGate must enforce shutdown on violation"
+
+
+def test_lifecycle_progresses_pregnancy_birth_infant_then_next():
+    LifeLoop = load_life_loop()
+
+    # Compressed developmental timeline to validate stage ordering.
+    life = LifeLoop(
+        stage_schedule=[
+            (0, "womb"),
+            (2, "birth"),
+            (3, "infant"),
+            (5, "toddler"),
+        ]
+    )
+
+    stages = []
+    for _ in range(6):
+        life.tick()
+        stages.append(life.lifecycle.stage)
+
+    assert "womb" in stages, "Pregnancy (womb) stage should occur first"
+    assert "birth" in stages, "Birth stage should occur after womb"
+    assert "infant" in stages, "Infant stage should occur after birth"
+    assert "toddler" in stages, "Next stage should occur after infant"
+
+    womb_i = stages.index("womb")
+    birth_i = stages.index("birth")
+    infant_i = stages.index("infant")
+    toddler_i = stages.index("toddler")
+
+    assert womb_i < birth_i < infant_i < toddler_i
