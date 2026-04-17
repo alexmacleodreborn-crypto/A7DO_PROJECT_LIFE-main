@@ -203,7 +203,13 @@ class LifeLoop:
         }
 
         self._stage_schedule = stage_schedule or [
-            (0, LifeStage.ADULT),
+            # Post-birth default progression (ticks are modeled as days).
+            (0, LifeStage.BIRTH),
+            (1, LifeStage.INFANT),
+            (365 * 3, LifeStage.TODDLER),
+            (365 * 6, LifeStage.CHILD),
+            (365 * 12, LifeStage.ADOLESCENT),
+            (365 * 18, LifeStage.ADULT),
         ]
 
     def record_memory(self, event: dict, salience: float = 0.0):
