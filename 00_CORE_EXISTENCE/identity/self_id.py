@@ -1,10 +1,10 @@
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 import uuid
 
 class SelfIdentity:
     def __init__(self):
         self.id = str(uuid.uuid4())
-        self.created_at = datetime.now(UTC).isoformat()
+        self.created_at = datetime.now(timezone.utc).isoformat()
 
     def as_dict(self):
         return {
