@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 
 class EpisodicMemory:
     def __init__(self, capacity=100, decay_rate=0.01):
@@ -9,7 +9,7 @@ class EpisodicMemory:
     def record(self, event: dict, salience: float = 0.0):
         record = {
             "event": event,
-            "time": datetime.now(UTC).isoformat(),
+            "time": datetime.now(timezone.utc).isoformat(),
             "salience": salience,
         }
         self._events.append(record)
